@@ -1,5 +1,5 @@
-const int topSensorPin = A1;
-const int botSensorPin = A0;
+const int topSensorPin = A0;
+const int botSensorPin = A1;
 
 const int buttonPin = 2;  
 
@@ -10,11 +10,13 @@ int lastButtonState = 0;     // previous state of the button
 int topSensorValue = 0;
 int botSensorValue = 0;
 
+int buttonCount = 0;
+
 int baselineMax = 0; // upper bound of what is considered "normal light"
 int baselineMin = 1000; // lower bound of what is considered "normal light"
 
 int obstructedMax = 0; // upper bound of what is considered "obstructed light"
-int obstrcutedMin = 1000; // lower bound of what is considered "obstructed light"
+int obstructedMin = 1000; // lower bound of what is considered "obstructed light"
 
 void setup() {
   // put your setup code here, to run once:
@@ -26,43 +28,72 @@ void setup() {
 // The code below takes 0.0217 +/- 0.0001 seconds to run. NEEDS UPDATE !
 void loop() {
   // put your main code here, to run repeatedly:
-  topSensorValue = analogRead(topSensorPin);
-  botSensorValue = analogRead(botSensorPin);
 
-  // Serial.print("Raw Sensor Value: "); // Enable for serial monitor, but not serial plotter
-  Serial.print(0); // lowest light level, for plot scaling
-  Serial.print(",");
-  Serial.print(topSensorValue);
-  Serial.print(","); 
-  Serial.print(botSensorValue);
-  Serial.print(","); 
-  Serial.print(1000); // highest light level, for plot scaling
-  Serial.print("\n");
-
-  // read the pushbutton input pin:
-  buttonState = digitalRead(buttonPin);
-  
-  // compare the buttonState to its previous state
-  if (buttonState != lastButtonState) {
-    // if the state has changed
+  while (buttonState == LOW){
+//    Serial.print("Reading.");
+//    Serial.print("\n");
+    topSensorValue = analogRead(topSensorPin);
+    botSensorValue = analogRead(botSensorPin);
+    // Serial.print("Raw Sensor Value: "); // Enable for serial monitor, but not serial plotter
+    Serial.print(0); // lowest light level, for plot scaling
+    Serial.print(",");
+    Serial.print(topSensorValue);
+    Serial.print(","); 
+    Serial.print(botSensorValue);
+    Serial.print(","); 
+    Serial.print(1000); // highest light level, for plot scaling
+    Serial.print("\n");
+    buttonState = digitalRead(buttonPin);
     if (buttonState == HIGH) {
-
-      // code to establish unblocked and blocked sensor baselines and tolerances
-      for (int iterBaseline = 0; iterBaseline < 1000; iterBaseline ++){
-        topSensorValue = analogRead(topSensorPin); // using the top sensor so that the ball can sit at the bottom of the tube
-      
-        if(topSensorValue < baselineMin){
-          baselineMin = topSensorValue;
+      while (buttonCount == 0){
+        // code to establish unblocked sensor baselines and tolerances
+        for (int iterBaseline = 0; iterBaseline < 1000; iterBaseline ++){
+          topSensorValue = analogRead(botSensorPin); // using the top sensor so that the ball can sit at the bottom of the tube
+        
+          if(topSensorValue < baselineMin){
+            baselineMin = topSensorValue;
+          }
+        
+          else if (topSensorValue > baselineMax){
+            baselineMax = topSensorValue;
+          }
         }
-      
-        else if (topSensorValue > baselineMax){
-          baselineMax = topSensorValue;
-        }
+//      Serial.print("The baseline minimum light value is: ");
+//      Serial.print(baselineMin);
+//      Serial.print("\n");
+//      Serial.print("The baseline maximum light value is: ");
+//      Serial.print(baselineMax);
+//      Serial.print("\n");
+      delay(10000);
+      buttonCount = 1;
+      buttonState = LOW;
+      continue;
       }
+      
+     while (buttonState == HIGH){ // if button has been pressed for the second time
+        // code to establish blocked sensor baselines and tolerances
+        for (int iterObstructed = 0; iterObstructed < 1000; iterObstructed ++){
+          botSensorValue = analogRead(botSensorPin); // using the bottom sensor so that the ball can sit at the bottom of the tube
+            
+          if(botSensorValue < obstructedMin){
+            obstructedMin = botSensorValue;
+          }
+            
+          else if (botSensorValue > obstructedMax){
+            obstructedMax = botSensorValue;
+          }
+        }
+//      Serial.print("The obstructed minimum light value is: ");
+//      Serial.print(obstructedMin);
+//      Serial.print("\n");
+//      Serial.print("The obstructed maximum light value is: ");
+//      Serial.print(obstructedMax);
+//      Serial.print("\n");
+      delay(10000);
+      buttonCount = 2;
+      buttonState = LOW;
+     }
     }
-    // Delay a little bit to avoid bouncing
-    delay(50);
   }
-  // save the current state as the last state, for next time through the loop
-  lastButtonState = buttonState;
+  delay(50);
 }
