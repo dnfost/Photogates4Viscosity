@@ -3,10 +3,6 @@ const int botSensorPin = A1;
 
 const int buttonPin = 2;  
 
-int buttonPushCounter = 0;   // counter for the number of button presses
-int buttonState = 0;         // current state of the button
-int lastButtonState = 0;     // previous state of the button
-
 int topSensorValue = 0;
 int botSensorValue = 0;
 
@@ -17,6 +13,17 @@ int baselineMin = 1000; // lower bound of what is considered "normal light"
 
 int obstructedMax = 0; // upper bound of what is considered "obstructed light"
 int obstructedMin = 1000; // lower bound of what is considered "obstructed light"
+
+int currTopSensorValue = 0;
+int currBotSensorValue = 0;
+
+int prevTopSensorValue = 0;
+int prevBotSensorValue = 0;
+
+int topTime0 = 0;
+int topTime1 = 0;
+int botTime0 = 0;
+int botTime1 = 0;
 
 void setup() {
   // put your setup code here, to run once:
@@ -74,16 +81,42 @@ void setup() {
         delay(6000);
       }
 
-      if (buttonCount == 2){ // If both modes have been calibrated ...
-        break;
+    while (buttonCount == 2){ // If both modes have been calibrated ...
+      ;
+      if (digitalRead(buttonPin) == HIGH){
+        buttonCount = 3;
       }
-      
     }
-    
+
+    if (buttonCount == 3){
+      break;
+    }
+   }
   }
 }
 
 void loop() {
-  ;
+  
+  currTopSensorValue = analogRead(topSensorPin);
+  currBotSensorValue = analogRead(botSensorPin);
+
+  if (currTopSensorValue < obstructedMax && currTopSensorValue > obstructedMin){
+    topTime0 = millis();
+    Serial.print("Top Time 0 is: ");
+    Serial.print(topTime0);
+    Serial.print("\n");
+  }
+
+  if (currBotSensorValue < obstructedMax && currBotSensorValue > obstructedMin){
+    botTime0 = millis();
+    Serial.print("Bottom Time 0 is: ");
+    Serial.print(botTime0);
+    Serial.print("\n");
+  }
+
+  else {
+    ;
+  }
+  
 }
 
