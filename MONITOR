@@ -20,10 +20,8 @@ int currBotSensorValue = 0;
 int prevTopSensorValue = 0;
 int prevBotSensorValue = 0;
 
-unsigned long topTime0 = 0;
-unsigned long topTime1 = 0;
-unsigned long botTime0 = 0;
-unsigned long botTime1 = 0;
+unsigned long topTime = 0;
+unsigned long botTime = 0;
 
 void setup() {
   // put your setup code here, to run once:
@@ -101,16 +99,16 @@ void loop() {
   currBotSensorValue = analogRead(botSensorPin);
 
   if (currTopSensorValue < obstructedMax + 6 && currTopSensorValue > obstructedMin - 6){
-    topTime0 = millis();
-    Serial.print("Top Time 0 is: ");
-    Serial.print(topTime0);
+    topTime = millis();
+    Serial.print("Top Time is: ");
+    Serial.print(topTime);
     Serial.print("\n");
   }
 
   if (currBotSensorValue < obstructedMax + 6 && currBotSensorValue > obstructedMin - 6){
-    botTime0 = millis();
-    Serial.print("Bottom Time 0 is: ");
-    Serial.print(botTime0);
+    botTime = millis();
+    Serial.print("Bottom Time is: ");
+    Serial.print(botTime);
     Serial.print("\n");
   }
 
