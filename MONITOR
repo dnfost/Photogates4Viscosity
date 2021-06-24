@@ -36,14 +36,14 @@ void setup() {
       if (buttonCount == 0 && digitalRead(buttonPin) == HIGH){ // If the button has never been pressed before ...
         
         for (int iterBaseline = 0; iterBaseline < 1000; iterBaseline ++){
-          topSensorValue = analogRead(topSensorPin); // using the top sensor so that the ball can sit at the bottom of the tube
+          botSensorValue = analogRead(botSensorPin); // using the bottom sensor so that the ball can sit at the bottom of the tube
           
-          if(topSensorValue < baselineMin){
-            baselineMin = topSensorValue;
+          if(botSensorValue < baselineMin){
+            baselineMin = botSensorValue;
           }
           
-          else if (topSensorValue > baselineMax){
-            baselineMax = topSensorValue;
+          else if (botSensorValue > baselineMax){
+            baselineMax = botSensorValue;
           }
         }
         buttonCount = 1;
@@ -83,6 +83,7 @@ void setup() {
       ;
       if (digitalRead(buttonPin) == HIGH){
         buttonCount = 3;
+        delay(6000);
       }
     }
 
@@ -98,14 +99,14 @@ void loop() {
   currTopSensorValue = analogRead(topSensorPin);
   currBotSensorValue = analogRead(botSensorPin);
 
-  if (currTopSensorValue < obstructedMax + 6 && currTopSensorValue > obstructedMin - 6){
+  if (currTopSensorValue < obstructedMax + 9 && currTopSensorValue > obstructedMin - 9 && buttonCount == 2){
     topTime = millis();
     Serial.print("Top Time is: ");
     Serial.print(topTime);
     Serial.print("\n");
   }
 
-  if (currBotSensorValue < obstructedMax + 6 && currBotSensorValue > obstructedMin - 6){
+  else if (currBotSensorValue < obstructedMax + 9 && currBotSensorValue > obstructedMin - 9 && buttonCount == 2){
     botTime = millis();
     Serial.print("Bottom Time is: ");
     Serial.print(botTime);
@@ -114,6 +115,22 @@ void loop() {
 
   else {
     ;
+  }
+
+  if (buttonCount == 3 && digitalRead(buttonPin) == HIGH){
+    buttonCount = 4;
+    delay(6000);
+    Serial.print("The elapsed time is: \t");
+    Serial.print(botTime - topTime); 
+    Serial.print("\n");
+
+    while (digitalRead(buttonPin) == HIGH){
+      ;
+    }
+
+    while (digitalRead(buttonPin) == LOW){
+      ;
+    }
   }
   
 }
