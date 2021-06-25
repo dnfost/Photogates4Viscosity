@@ -1,7 +1,7 @@
 const int topSensorPin = A0;
 const int botSensorPin = A1;
 
-const int buttonPin = 2;  
+const int buttonPin = 2;
 
 int topSensorValue = 0;
 int botSensorValue = 0;
@@ -14,35 +14,29 @@ int baselineMin = 1000; // lower bound of what is considered "normal light"
 int obstructedMax = 0; // upper bound of what is considered "obstructed light"
 int obstructedMin = 1000; // lower bound of what is considered "obstructed light"
 
-int currTopSensorValue = 0;
-int currBotSensorValue = 0;
-
-int prevTopSensorValue = 0;
-int prevBotSensorValue = 0;
-
 unsigned long topTime = 0;
 unsigned long botTime = 0;
 
 void setup() {
   // put your setup code here, to run once:
   pinMode(buttonPin, INPUT); // set button as an input
-  
+
   Serial.begin(9600);
 
-  while (digitalRead(buttonPin == LOW)){ // While waiting for a button press ...
+  while (digitalRead(buttonPin == LOW)) { // While waiting for a button press ...
 
-    if (digitalRead(buttonPin) == HIGH){ // If a button press is detected ...
+    if (digitalRead(buttonPin) == HIGH) { // If a button press is detected ...
 
-      if (buttonCount == 0 && digitalRead(buttonPin) == HIGH){ // If the button has never been pressed before ...
-        
-        for (int iterBaseline = 0; iterBaseline < 1000; iterBaseline ++){
+      if (buttonCount == 0 && digitalRead(buttonPin) == HIGH) { // If the button has never been pressed before ...
+
+        for (int iterBaseline = 0; iterBaseline < 1000; iterBaseline ++) {
           botSensorValue = analogRead(botSensorPin); // using the bottom sensor so that the ball can sit at the bottom of the tube
-          
-          if(botSensorValue < baselineMin){
+
+          if (botSensorValue < baselineMin) {
             baselineMin = botSensorValue;
           }
-          
-          else if (botSensorValue > baselineMax){
+
+          else if (botSensorValue > baselineMax) {
             baselineMax = botSensorValue;
           }
         }
@@ -56,16 +50,16 @@ void setup() {
         delay(6000);
       }
 
-      if (buttonCount == 1 && digitalRead(buttonPin) == HIGH){ // If the button has been pressed once before ...
-        
-        for (int iterBaseline = 0; iterBaseline < 1000; iterBaseline ++){
+      if (buttonCount == 1 && digitalRead(buttonPin) == HIGH) { // If the button has been pressed once before ...
+
+        for (int iterBaseline = 0; iterBaseline < 1000; iterBaseline ++) {
           botSensorValue = analogRead(botSensorPin); // using the bottom sensor so that the ball can sit at the bottom of the tube
-              
-          if(botSensorValue < obstructedMin){
+
+          if (botSensorValue < obstructedMin) {
             obstructedMin = botSensorValue;
           }
-              
-          else if (botSensorValue > obstructedMax){
+
+          else if (botSensorValue > obstructedMax) {
             obstructedMax = botSensorValue;
           }
         }
@@ -79,34 +73,34 @@ void setup() {
         delay(6000);
       }
 
-    while (buttonCount == 2){ // If both modes have been calibrated ...
-      ;
-      if (digitalRead(buttonPin) == HIGH){
-        buttonCount = 3;
-        delay(6000);
+      while (buttonCount == 2) { // If both modes have been calibrated ...
+        ;
+        if (digitalRead(buttonPin) == HIGH) {
+          buttonCount = 3;
+          delay(6000);
+        }
+      }
+
+      if (buttonCount == 3) {
+        break;
       }
     }
-
-    if (buttonCount == 3){
-      break;
-    }
-   }
   }
 }
 
 void loop() {
-  
+
   currTopSensorValue = analogRead(topSensorPin);
   currBotSensorValue = analogRead(botSensorPin);
 
-  if (currTopSensorValue < obstructedMax + 9 && currTopSensorValue > obstructedMin - 9 && buttonCount == 2){
+  if (currTopSensorValue < obstructedMax + 9 && currTopSensorValue > obstructedMin - 9) {
     topTime = millis();
     Serial.print("Top Time is: ");
     Serial.print(topTime);
     Serial.print("\n");
   }
 
-  else if (currBotSensorValue < obstructedMax + 9 && currBotSensorValue > obstructedMin - 9 && buttonCount == 2){
+  else if (currBotSensorValue < obstructedMax + 9 && currBotSensorValue > obstructedMin - 9) {
     botTime = millis();
     Serial.print("Bottom Time is: ");
     Serial.print(botTime);
@@ -117,21 +111,21 @@ void loop() {
     ;
   }
 
-  if (buttonCount == 3 && digitalRead(buttonPin) == HIGH){
+  if (buttonCount == 3 && digitalRead(buttonPin) == HIGH) {
     buttonCount = 4;
     delay(6000);
     Serial.print("The elapsed time is: \t");
-    Serial.print(botTime - topTime); 
+    Serial.print(botTime - topTime);
     Serial.print("\n");
 
-    while (digitalRead(buttonPin) == HIGH){
+    while (digitalRead(buttonPin) == HIGH) {
       ;
     }
 
-    while (digitalRead(buttonPin) == LOW){
+    while (digitalRead(buttonPin) == LOW) {
       ;
     }
   }
-  
+
 }
 
