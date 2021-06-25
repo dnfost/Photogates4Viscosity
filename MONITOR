@@ -51,7 +51,11 @@ void setup() {
         Serial.print("The baseline maximum light value is: ");
         Serial.print(baselineMax);
         Serial.print("\n");
+        Serial.print("Initializing ...");
+        Serial.print("\n");
         delay(6000);
+        Serial.print("Ready");
+        Serial.print("\n");
       }
 
       if (buttonCount == 1 && digitalRead(buttonPin) == HIGH) { // If the button has been pressed once before ...
@@ -74,7 +78,11 @@ void setup() {
         Serial.print("The obstructed maximum light value is: ");
         Serial.print(obstructedMax);
         Serial.print("\n");
+        Serial.print("Initializing ...");
+        Serial.print("\n");
         delay(6000);
+        Serial.print("Ready");
+        Serial.print("\n");
       }
 
       while (buttonCount == 2) { // If both modes have been calibrated ...
@@ -117,7 +125,11 @@ void loop() { // One iteration takes 0.03 seconds to run - UPDATED: 2021-06-25
 
   if (buttonCount == 3 && digitalRead(buttonPin) == HIGH) {
     buttonCount = 4;
+    Serial.print("Initializing ...");
+    Serial.print("\n");
     delay(6000);
+    Serial.print("Ready");
+    Serial.print("\n");
     Serial.print("The elapsed time is: \t");
     Serial.print(botTime - topTime);
     Serial.print("\n");
@@ -132,4 +144,3 @@ void loop() { // One iteration takes 0.03 seconds to run - UPDATED: 2021-06-25
   }
 
 }
-
