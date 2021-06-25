@@ -14,6 +14,9 @@ int baselineMin = 1000; // lower bound of what is considered "normal light"
 int obstructedMax = 0; // upper bound of what is considered "obstructed light"
 int obstructedMin = 1000; // lower bound of what is considered "obstructed light"
 
+int currTopSensorValue = 0;
+int currBotSensorValue = 0;
+
 unsigned long topTime = 0;
 unsigned long botTime = 0;
 
