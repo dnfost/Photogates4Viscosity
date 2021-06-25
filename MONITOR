@@ -21,6 +21,7 @@ unsigned long topTime = 0;
 unsigned long botTime = 0;
 
 void setup() {
+  
   // put your setup code here, to run once:
   pinMode(buttonPin, INPUT); // set button as an input
 
@@ -91,7 +92,7 @@ void setup() {
   }
 }
 
-void loop() {
+void loop() { // One iteration takes 0.03 seconds to run - UPDATED: 2021-06-25
 
   currTopSensorValue = analogRead(topSensorPin);
   currBotSensorValue = analogRead(botSensorPin);
