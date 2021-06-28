@@ -105,16 +105,16 @@ void loop() { // One iteration takes 0.03 seconds to run - UPDATED: 2021-06-25
   currTopSensorValue = analogRead(topSensorPin);
   currBotSensorValue = analogRead(botSensorPin);
 
-  if (currTopSensorValue < obstructedMax + 9 && currTopSensorValue > obstructedMin - 9) {
+  if (currTopSensorValue < obstructedMax + 9 && currTopSensorValue > obstructedMin - 9 && buttonCount == 3) {
     topTime = millis();
-    Serial.print("Top Time is: ");
+    Serial.print("Top Sensor Time is: ");
     Serial.print(topTime);
     Serial.print("\n");
   }
 
-  else if (currBotSensorValue < obstructedMax + 9 && currBotSensorValue > obstructedMin - 9) {
+  else if (currBotSensorValue < obstructedMax + 9 && currBotSensorValue > obstructedMin - 9 && buttonCount == 3) {
     botTime = millis();
-    Serial.print("Bottom Time is: ");
+    Serial.print("Bottom Sensor Time is: ");
     Serial.print(botTime);
     Serial.print("\n");
   }
