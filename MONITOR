@@ -1,146 +1,186 @@
-const int topSensorPin = A0;
-const int botSensorPin = A1;
+    /*
+ VernierPhotogateTimer (v 2013.12.09)
+ Monitors a Vernier Photogate connected to BTD connector. 
 
-const int buttonPin = 2;
+ This sketch lists the time in microseconds since the program started running.
 
-int topSensorValue = 0;
-int botSensorValue = 0;
+ To ensure the greatest accuracy, this code is written using interrupts.
+ For more information about using interrupts, see: 
+ http://playground.arduino.cc/Code/Interrupts
 
-int buttonCount = 0;
+ For more details around using Arduino with Vernier see 
+ www.vernier.com/arduino. 
 
-int baselineMax = 0; // upper bound of what is considered "normal light"
-int baselineMin = 1000; // lower bound of what is considered "normal light"
+ Modified by: B. Huang, SparkFun Electronics
+ December 9, 2013
 
-int obstructedMax = 0; // upper bound of what is considered "obstructed light"
-int obstructedMin = 1000; // lower bound of what is considered "obstructed light"
+ This version incorporates a "circular" buffer of 150 elements and stores all events 
+ (blocking and unblocking) of the photogate to an precision of 1 us. In addition, 
+ the data is streamed to the Serial buffer and can be captured, copied, exported, 
+ and analyzed in your favorite analysis tool -- Graphical Analysis, LoggerPro, Excel,
+ Google Sheets, Matlab, etc...
 
-int currTopSensorValue = 0;
-int currBotSensorValue = 0;
+ */
+#include <SoftwareSerial.h>
 
-unsigned long topTime = 0;
-unsigned long botTime = 0;
+// mode variable definitions
+#define GATE_MODE 1
+#define PULSE_MODE 2
+#define PENDULUM_MODE 3
 
-void setup() {
-  
-  // put your setup code here, to run once:
-  pinMode(buttonPin, INPUT); // set button as an input
+#define bufferSize 150  // Sets the size of the circular buffer for storing interrupt data events. Increasing this may cause erratic behavior of the code.
+#define DELIM '\t'   // this is the data delimitter. Default setting is a tab character ("\t") 
 
-  Serial.begin(9600);
+const int baudRate = 9600;  // Baud rate for serial communications. Increase this for high data rate applications (i.e. smart pulley)
 
-  while (digitalRead(buttonPin == LOW)) { // While waiting for a button press ...
+unsigned int refreshRate = 250;  // sets # of milliseconds between refreshes of LED Display
 
-    if (digitalRead(buttonPin) == HIGH) { // If a button press is detected ...
+const int buttonPin = 12;   // default buttonPin on Vernier Shield
+const int ledPin = 13;    // re-purposed pin 13 to tie to the Serial 7 Segment
+const int photogatePin = 2; // default pin if plugged into Digital 1 on SparkFun Vernier Shield 
 
-      if (buttonCount == 0 && digitalRead(buttonPin) == HIGH) { // If the button has never been pressed before ...
+/* The following variables are all used and modified by the code. These should not be changed or re-named. */
+int mode = 1; // sets the default mode of operation
+// Mode 1 -- Gate, Mode 2 -- Pulse, Mode 3 -- Pendulum 
 
-        for (int iterBaseline = 0; iterBaseline < 1000; iterBaseline ++) {
-          botSensorValue = analogRead(botSensorPin); // using the bottom sensor so that the ball can sit at the bottom of the tube
+int lastState; 
+int currTimeDigits;
+unsigned long currTime; 
+unsigned long timerOffset = 0; 
+unsigned int displayIndex; // the current item that has been displayed to the Serial Monitor from the data buffer.
+unsigned int count;  // tracks the total # of data entries 
 
-          if (botSensorValue < baselineMin) {
-            baselineMin = botSensorValue;
-          }
+char tempString[4];   // String buffer to store for sending to the serial 7 segment display
 
-          else if (botSensorValue > baselineMax) {
-            baselineMax = botSensorValue;
-          }
-        }
-        buttonCount = 1;
-        Serial.print("The baseline minimum light value is: ");
-        Serial.print(baselineMin);
-        Serial.print("\n");
-        Serial.print("The baseline maximum light value is: ");
-        Serial.print(baselineMax);
-        Serial.print("\n");
-        Serial.print("Initializing ...");
-        Serial.print("\n");
-        delay(6000);
-        Serial.print("Ready");
-        Serial.print("\n");
-      }
+/* These variables are all accessed and modified by the interrupt handler "PhotogateEvent" 
+Variables used by the Interrupt handler must be defined as volatile. */
+volatile int photogate = HIGH;
+volatile int start = 0;  // 1 == start, 0 == stop
+volatile unsigned int numBlocks;
+volatile unsigned long startTime;  //Time in us
+volatile unsigned long stopTime;  //Time in us
+volatile byte dataIndex;
+volatile byte displayCount;  // stores the number of items in data Buffer to be displayed
+volatile byte state[bufferSize];
+volatile unsigned long time_us[bufferSize]; // Time in us
 
-      if (buttonCount == 1 && digitalRead(buttonPin) == HIGH) { // If the button has been pressed once before ...
+void setup() 
+{
+  attachInterrupt(0, photogateEvent, CHANGE); // photogate_event
+  pinMode(buttonPin, INPUT_PULLUP);
+  pinMode(ledPin, OUTPUT);
+  Serial.begin(9600);           // set up Serial library at 9600 bps
+  displayHeader();
+};// end of setup
 
-        for (int iterBaseline = 0; iterBaseline < 1000; iterBaseline ++) {
-          botSensorValue = analogRead(botSensorPin); // using the bottom sensor so that the ball can sit at the bottom of the tube
+void loop ()
+{ 
+  // check for button press to change modes
+  if (digitalRead(12) == LOW)
+  {
+    resetCount();
 
-          if (botSensorValue < obstructedMin) {
-            obstructedMin = botSensorValue;
-          }
+    while((digitalRead(buttonPin) == LOW)); // hold until button is released
+    delay(10); // for de-bouncing
+    displayHeader();
+  } // if button is pressed
 
-          else if (botSensorValue > obstructedMax) {
-            obstructedMax = botSensorValue;
-          }
-        }
-        buttonCount = 2;
-        Serial.print("The obstructed minimum light value is: ");
-        Serial.print(obstructedMin);
-        Serial.print("\n");
-        Serial.print("The obstructed maximum light value is: ");
-        Serial.print(obstructedMax);
-        Serial.print("\n");
-        Serial.print("Initializing ...");
-        Serial.print("\n");
-        delay(6000);
-        Serial.print("Ready");
-        Serial.print("\n");
-      }
+  if (displayCount > 0)  // only display to Serial monitor if an interrupt has added data to the data buffer.
+  {
+    count++;
+    Serial.print(count);
+    Serial.print(DELIM); //tab character
+    Serial.print(state[displayIndex]);
+    Serial.print(DELIM); //tab character
+    Serial.print((time_us[displayIndex] - timerOffset) / 1E6, 6);  // at least 6 sig figs
 
-      while (buttonCount == 2) { // If both modes have been calibrated ...
-        ;
-        if (digitalRead(buttonPin) == HIGH) {
-          buttonCount = 3;
-          delay(6000);
-        }
-      }
+    Serial.println();
 
-      if (buttonCount == 3) {
-        break;
-      }
+    displayIndex++;
+    if(displayIndex >= bufferSize)
+    {
+      displayIndex = 0;
     }
+    displayCount--; // deduct one
+  }
+} // end of loop
+
+void resetCount()
+{
+  dataIndex = 0;
+  displayIndex = 0;
+  count = 0;
+  numBlocks = 0;
+  start = 0;
+  Serial.println();
+  Serial.println("*****Reset*****");
+  Serial.println();
+  timerOffset = micros();
+
+}
+
+/*************************************************
+ * photogateEvent()
+ * 
+ * Interrupt service routine. Handles capturing 
+ * the time and saving this to memory when the 
+ * photogate issues an interrupt on pin 2.
+ * 
+ * As it is currently written, the photogate 
+ * will only work on Digital Port 1.
+ *************************************************/
+void photogateEvent()
+{ 
+  time_us[dataIndex] = micros();
+
+  photogate = digitalRead(photogatePin);
+
+  if (photogate == 1)  
+  {
+    state[dataIndex] = 0;  // reverses the result so that 1 = blocked, 0 = open
+    digitalWrite(ledPin, LOW);  // turns the indicator LED off
+  }
+  else 
+  {
+    state[dataIndex] = 1;                  // normal operation is 1 = open and 0 = blocked
+    digitalWrite(ledPin, HIGH);   // turns the indicator LED on
+  }
+  displayCount++;  // add one to "to be displayed" buffer
+
+  dataIndex++;
+  if(dataIndex >= bufferSize)
+  {
+    dataIndex = 0;
   }
 }
 
-void loop() { // One iteration takes 0.03 seconds to run - UPDATED: 2021-06-25
+/*************************************************
+ * displayHeader()
+ *
+ * Presents the data header to Serial Monitor
+ * This data is tab delimitted and can be copied 
+ * and pasted directly into Excel or spreadsheet
+ * / graphing program. 
+ *************************************************/
+void displayHeader()
+{
+  Serial.println("Vernier Format 2");
+  Serial.println();
+  Serial.print("Event");
+  Serial.print(DELIM);
+  Serial.print("Blocked");
+  Serial.print(DELIM);
+  Serial.print("Time       ");    
+  Serial.println();
 
-  currTopSensorValue = analogRead(topSensorPin);
-  currBotSensorValue = analogRead(botSensorPin);
+// Units
+  Serial.print("#");
+  Serial.print(DELIM);
+  Serial.print("(n/a)");
+  Serial.print(DELIM);
+  Serial.print("(s)         ");    
+  Serial.println();
 
-  if (currTopSensorValue < obstructedMax + 12 && currTopSensorValue > obstructedMin - 12 && buttonCount == 3) {
-    topTime = millis();
-    Serial.print("Top Sensor Time is: ");
-    Serial.print(topTime);
-    Serial.print("\n");
-  }
 
-  else if (currBotSensorValue < obstructedMax + 12 && currBotSensorValue > obstructedMin - 12 && buttonCount == 3) {
-    botTime = millis();
-    Serial.print("Bottom Sensor Time is: ");
-    Serial.print(botTime);
-    Serial.print("\n");
-  }
-
-  else {
-    ;
-  }
-
-  if (buttonCount == 3 && digitalRead(buttonPin) == HIGH) {
-    buttonCount = 4;
-    Serial.print("Initializing ...");
-    Serial.print("\n");
-    delay(6000);
-    Serial.print("Ready");
-    Serial.print("\n");
-    Serial.print("The elapsed time is: \t");
-    Serial.print(botTime - topTime);
-    Serial.print("\n");
-
-    while (digitalRead(buttonPin) == HIGH) {
-      ;
-    }
-
-    while (digitalRead(buttonPin) == LOW) {
-      ;
-    }
-  }
-
+  Serial.println("--------------------------");  
 }
